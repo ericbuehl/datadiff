@@ -326,6 +326,12 @@ def test_diff_set_context():
 def test_diff_frozenset():
     return test_diff_set(set_type=frozenset)
 
+def test_equal_set():
+    assert_false(diff(set([1]), set([1])))
+
+def test_empty_set():
+    assert_false(diff(set([]), set([])))
+
 def test_eval_bool():
     d = diff([1], [1], fromfile="x", tofile="y")
     assert_equal(bool(d), False)

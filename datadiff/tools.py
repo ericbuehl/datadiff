@@ -34,3 +34,9 @@ def assert_equal(first, second, msg=None):
     raise AssertionError(msg)
 
 assert_equals = assert_equal
+
+def assertAlmostEqual(first, second, places=7, msg=None):
+    ddiff = diff(first, second, places=places)
+    if ddiff:
+        raise AssertionError(msg or "\n" + str(ddiff))
+

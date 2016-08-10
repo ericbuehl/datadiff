@@ -3,7 +3,7 @@ from textwrap import dedent
 
 from datadiff import tools
 
-from test_datadiff import assert_equal
+from nose.tools import assert_raises, assert_equal
 
 
 def test_assert_equal_true():
@@ -66,6 +66,18 @@ def test_assert_equal_simple_types():
     else:
         raise AssertionError("Should've raised an AssertionError")
 
+def test_assert_almost_equal():
+    tools.assertAlmostEqual([1.0], [1.0])
+    tools.assertAlmostEqual([1.0], [1.000000001])
+    tools.assertAlmostEqual([1.0], [1.00001], places=4)
+    tools.assertAlmostEqual({"k": 1.0}, {"k": 1.00001}, places=4)
+    tools.assertAlmostEqual({1.0}, {1.00001}, places=4)
+
+def test_assert_not_almost_equal():
+    assert_raises(AssertionError, tools.assertAlmostEqual, [1.0], [1.00001])
+    assert_raises(AssertionError, tools.assertAlmostEqual, [1.0], [1.0001], places=4)
+    assert_raises(AssertionError, tools.assertAlmostEqual, {"k": 1.0}, {"k": 1.1}, places=4)
+    assert_raises(AssertionError, tools.assertAlmostEqual, {1.0}, {1.1}, places=4)
 
 if __name__ == '__main__':
     try:

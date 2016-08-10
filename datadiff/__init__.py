@@ -57,7 +57,7 @@ def unified_diff_strings(a, b, fromfile='', tofile='', fromfiledate='', tofileda
                                   fromfile, tofile, fromfiledate, tofiledate, context,
                                   lineterm=''))
 
-def diff(a, b, context=3, depth=0, fromfile='a', tofile='b'):
+def diff(a, b, context=3, depth=0, fromfile='a', tofile='b', places=None):
     if isinstance(a, string_types) and isinstance(b, string_types):
         # special cases
         if '\n' in a or '\n' in b:
@@ -69,11 +69,11 @@ def diff(a, b, context=3, depth=0, fromfile='a', tofile='b'):
     if type(a) != type(b):
         raise DiffTypeError('Types differ: %s=%s %s=%s  Values of a and b are: %r, %r' % (fromfile, tofile, type(a), type(b), a, b))
     if type(a) == dict:
-        return diff_dict(a, b, context, depth, fromfile=fromfile, tofile=tofile)
+        return diff_dict(a, b, context, depth, fromfile=fromfile, tofile=tofile, places=places)
     if hasattr(a, 'intersection') and hasattr(a, 'difference'):
-        return diff_set(a, b, context, depth, fromfile=fromfile, tofile=tofile)
+        return diff_set(a, b, context, depth, fromfile=fromfile, tofile=tofile, places=places)
     try:
-        return try_diff_seq(a, b, context, depth, fromfile=fromfile, tofile=tofile)
+        return try_diff_seq(a, b, context, depth, fromfile=fromfile, tofile=tofile, places=places)
     except NotSequence:
         raise DiffNotImplementedForType(type(a))
 
@@ -103,7 +103,8 @@ class DataDiff(object):
         self.diffs.append(('datadiff', datadiff))
 
     def multi(self, change, items):
-        self.diffs.append((change, items))
+        if items:
+            self.diffs.append((change, items))
 
     def delete(self, item):
         return self.multi('delete', [item])
@@ -169,21 +170,23 @@ class DataDiff(object):
     def __bool__(self):
         return bool([d for d in self.diffs if d[0] != 'equal'])
 
-def hashable(s):
+def hashable(s, places=None):
     try:
         # convert top-level container
         if type(s) == list:
             ret = tuple(s)
         elif type(s) == dict:
-            ret = frozenset(hashable(_) for _ in s.items())
+            ret = frozenset(hashable(_, places=places) for _ in s.items())
         elif type(s) == set:
             ret = frozenset(s)
+        elif type(s) == float and places is not None:
+            ret = round(s, places)
         else:
             ret = s
 
         # make it recursive
         if type(ret) == tuple:
-            ret = tuple(hashable(_) for _ in ret)
+            ret = tuple(hashable(_, places=places) for _ in ret)
 
         # validate
         hash(ret)
@@ -193,24 +196,24 @@ def hashable(s):
     else:
         return ret
 
-def try_diff_seq(a, b, context=3, depth=0, fromfile='a', tofile='b'):
+def try_diff_seq(a, b, context=3, depth=0, fromfile='a', tofile='b', places=None):
     """
     Safe to try any containers with this function, to see if it might be a sequence
     Raises TypeError if its not a sequence
     """
     try:
-        return diff_seq(a, b, context, depth, fromfile=fromfile, tofile=tofile)
+        return diff_seq(a, b, context, depth, fromfile=fromfile, tofile=tofile, places=places)
     except NotHashable:
         raise
     except:
         log.debug('tried SequenceMatcher but got error', exc_info=True)
         raise NotSequence("Cannot use SequenceMatcher on %s" % type(a))
 
-def diff_seq(a, b, context=3, depth=0, fromfile='a', tofile='b'):
+def diff_seq(a, b, context=3, depth=0, fromfile='a', tofile='b', places=None):
     if not hasattr(a, '__iter__') and not hasattr(a, '__getitem__'):
         raise NotSequence("Not a sequence %s" % type(a))
-    hashable_a = [hashable(_) for _ in a]
-    hashable_b = [hashable(_) for _ in b]
+    hashable_a = [hashable(_, places=places) for _ in a]
+    hashable_b = [hashable(_, places=places) for _ in b]
     sm = SequenceMatcher(a = hashable_a, b = hashable_b)
     if type(a) == tuple:
         ddiff = DataDiff(tuple, '(', ')', fromfile=fromfile, tofile=tofile)
@@ -266,14 +269,14 @@ class dictitem(tuple):
             return "%r: %s" % (key, diff_val.strip())
         return "%r: %r" % (key, val)
 
-def diff_dict(a, b, context=3, depth=0, fromfile='a', tofile='b'):
+def diff_dict(a, b, context=3, depth=0, fromfile='a', tofile='b', places=None):
     ddiff = DataDiff(dict, '{', '}', fromfile=fromfile, tofile=tofile)
     for key in a.keys():
         if key not in b:
             ddiff.delete(dictitem((key, a[key])))
-        elif hashable(a[key]) != hashable(b[key]):
+        elif hashable(a[key], places=places) != hashable(b[key], places=places):
             try:
-                nested_diff = diff(a[key], b[key], context, depth+1)
+                nested_diff = diff(a[key], b[key], context, depth+1, places=places)
                 nested_item = dictitem((key, nested_diff))
                 nested_item.depth = depth+1
                 ddiff.equal(nested_item) # not really equal
@@ -305,11 +308,13 @@ def diff_dict(a, b, context=3, depth=0, fromfile='a', tofile='b'):
 
     return ddiff
 
-def diff_set(a, b, context=3, depth=0, fromfile='b', tofile='a'):
+def diff_set(a, b, context=3, depth=0, fromfile='b', tofile='a', places=None):
+    norm_a = set(map(lambda x: round(x, places), a)) if places is not None else a
+    norm_b = set(map(lambda x: round(x, places), b)) if places is not None else b
     ddiff = DataDiff(type(a), fromfile=fromfile, tofile=tofile)
-    ddiff.delete_multi(a - b)
-    ddiff.insert_multi(b - a)
-    equal = list(a.intersection(b))
+    ddiff.delete_multi(norm_a - norm_b)
+    ddiff.insert_multi(norm_b - norm_a)
+    equal = list(norm_a.intersection(norm_b))
     ddiff.equal_multi(equal[:context])
     if len(equal) > context:
         ddiff.context_end_container()

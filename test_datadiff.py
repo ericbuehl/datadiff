@@ -5,7 +5,7 @@ from datetime import datetime
 import sys
 
 import six
-from nose.tools import assert_raises, assert_equal, raises
+from nose.tools import assert_raises, assert_equal, assert_false, raises
 
 from datadiff import diff, DataDiff, NotHashable, DiffNotImplementedForType, DiffTypeError
 
@@ -478,3 +478,8 @@ def test_nested_unhashable2():
          },
         ]''')
     assert_equal(str(d), expected)
+
+def test_hashable_dict_values():
+    # compare hashable dict values
+    assert_false(diff({1: (1,)}, {1: [1,]}), "dict values do not compare with hashable values")
+

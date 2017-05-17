@@ -342,6 +342,9 @@ def test_eval_bool():
     d = diff(dict(a=1), dict(a=1), fromfile="x", tofile="y")
     assert_equal(bool(d), False)
 
+    d = diff(dict(a=1, b=2, c=3, d=4), dict(a=1, b=2, c=3, d=4), fromfile="x", tofile="y")
+    assert_equal(bool(d), False)
+
 def test_equal():
     d = diff([1], [1], fromfile="x", tofile="y")
     assert_equal(str(d), '')

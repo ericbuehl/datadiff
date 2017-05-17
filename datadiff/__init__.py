@@ -303,7 +303,7 @@ def diff_dict(a, b, context=3, depth=0, fromfile='a', tofile='b', places=None):
             return abs(hash(key)) # abs for consistency between py2/3, at least for datetime
     ddiff.diffs.sort(key=diffitem_dictitem_sort_key)
 
-    if context < 0:
+    if ddiff and context < 0:
         ddiff.context_end_container()
 
     return ddiff

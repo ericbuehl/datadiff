@@ -149,7 +149,7 @@ class DataDiff(object):
                 output.append(' '*depth + '@@  @@')
                 continue
             elif change == 'datadiff':
-                output.append(' '*depth + items.stringify(depth+1) + ',')
+                output.append(items.stringify(depth+1) + ',')
                 continue
             if change == 'delete':
                 ch = '-'
@@ -262,12 +262,15 @@ def diff_seq(a, b, context=3, depth=0, fromfile='a', tofile='b', places=None):
 
 
 class dictitem(tuple):
-    def __repr__(self):
+    def stringify(self, depth=0, include_preamble=True):
         key, val = self
         if type(val) == DataDiff:
-            diff_val = val.stringify(depth=self.depth, include_preamble=False)
-            return "%r: %s" % (key, diff_val.strip())
+            diff_val = val.stringify(depth=depth, include_preamble=include_preamble)
+            return " "*depth + "%r: %s" % (key, diff_val.strip())
         return "%r: %r" % (key, val)
+
+    def __repr__(self):
+        return self.stringify(0, False)
 
 def diff_dict(a, b, context=3, depth=0, fromfile='a', tofile='b', places=None):
     ddiff = DataDiff(dict, '{', '}', fromfile=fromfile, tofile=tofile)
@@ -278,8 +281,7 @@ def diff_dict(a, b, context=3, depth=0, fromfile='a', tofile='b', places=None):
             try:
                 nested_diff = diff(a[key], b[key], context, depth+1, places=places)
                 nested_item = dictitem((key, nested_diff))
-                nested_item.depth = depth+1
-                ddiff.equal(nested_item) # not really equal
+                ddiff.nested(nested_item)
             except DiffTypeError:
                 ddiff.delete(dictitem((key, a[key])))
                 ddiff.insert(dictitem((key, b[key])))

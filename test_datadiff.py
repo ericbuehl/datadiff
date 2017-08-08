@@ -345,6 +345,12 @@ def test_eval_bool():
     d = diff(dict(a=1, b=2, c=3, d=4), dict(a=1, b=2, c=3, d=4), fromfile="x", tofile="y")
     assert_equal(bool(d), False)
 
+    d = diff(dict(a=[]), dict(a=[1]), fromfile="x", tofile="y")
+    assert_equal(bool(d), True)
+
+    d = diff(dict(a=[1]), dict(a=[1]), fromfile="x", tofile="y")
+    assert_equal(bool(d), False)
+
 def test_equal():
     d = diff([1], [1], fromfile="x", tofile="y")
     assert_equal(str(d), '')
@@ -459,7 +465,7 @@ def test_nested_unhashable():
          (
          @@ -0,1 +0,1 @@
           'Wiki.test',
-           {
+          {
           -'mount_point': 'Wiki',
           -'user_id': 'badf00d',
           +'user_id': 'abc',

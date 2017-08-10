@@ -230,7 +230,7 @@ def diff_seq(a, b, context=3, depth=0, fromfile='a', tofile='b', places=None):
                 consecutive_inserts = []
                 for a2, b2 in zip(a[i1:i2], b[j1:j2]):
                     try:
-                        nested_diff = diff(a2, b2, context, depth+1)
+                        nested_diff = diff(a2, b2, context, depth+1, places=places)
                         ddiff.delete_multi(consecutive_deletes)
                         ddiff.insert_multi(consecutive_inserts)
                         consecutive_deletes = []
